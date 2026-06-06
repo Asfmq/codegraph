@@ -101,6 +101,15 @@ describe('Language Detection', () => {
     expect(detectLanguage('stdio.h', '#ifndef STDIO_H\nvoid printf();\n#endif\n')).toBe('c');
   });
 
+  it('should detect Fortran files', () => {
+    expect(detectLanguage('main.f90')).toBe('fortran');
+    expect(detectLanguage('module.f95')).toBe('fortran');
+    expect(detectLanguage('types.f03')).toBe('fortran');
+    expect(detectLanguage('calc.f')).toBe('fortran');
+    expect(detectLanguage('utils.for')).toBe('fortran');
+    expect(detectLanguage('grid.ftn')).toBe('fortran');
+  });
+
   it('should return unknown for unsupported extensions', () => {
     expect(detectLanguage('styles.css')).toBe('unknown');
     expect(detectLanguage('data.json')).toBe('unknown');
@@ -4457,5 +4466,98 @@ func (s Stack[T]) Len() int { return len(s.items) }
     expect(ts.nodes.find((n) => n.name === 'hello' && n.kind === 'function')).toBeDefined();
     const js = extractFromSource('service.xsjs', 'function handleRequest() { return 1; }');
     expect(js.nodes.find((n) => n.name === 'handleRequest' && n.kind === 'function')).toBeDefined();
+  });
+});
+
+describe('Fortran Extraction', () => {
+  const sample = `
+module math_utils
+  implicit none
+  private
+  public :: add, multiply, Point
+
+  type :: Point
+    real :: x, y
+  end type Point
+
+contains
+
+  function add(a, b) result(c)
+    real, intent(in) :: a, b
+    real :: c
+    c = a + b
+  end function add
+
+  function multiply(a, b) result(c)
+    real, intent(in) :: a, b
+    real :: c
+    c = a * b
+  end function multiply
+
+  subroutine print_point(p)
+    type(Point), intent(in) :: p
+    print *, "Point(", p%x, ", ", p%y, ")"
+  end subroutine print_point
+
+end module math_utils
+
+program main
+  use math_utils, only: add, multiply, Point
+  implicit none
+  type(Point) :: p1
+  real :: x, y, z
+
+  x = 2.0
+  y = 3.0
+  z = add(x, y)
+  p1 = Point(x, y)
+
+  print *, "Sum:", z
+  print *, "Product:", multiply(x, y)
+  call print_point(p1)
+end program main
+`;
+
+  it('should extract modules and programs as classes', () => {
+    const result = extractFromSource('test.f90', sample);
+    const classes = result.nodes.filter((n) => n.kind === 'class');
+    expect(classes.map((c) => c.name).sort()).toEqual(['Point', 'main', 'math_utils']);
+  });
+
+  it('should extract functions and subroutines as methods inside modules', () => {
+    const result = extractFromSource('test.f90', sample);
+    const methods = result.nodes.filter((n) => n.kind === 'method');
+    const names = methods.map((m) => m.name).sort();
+    expect(names).toContain('add');
+    expect(names).toContain('multiply');
+    expect(names).toContain('print_point');
+  });
+
+  it('should scope methods to their module via qualified name', () => {
+    const result = extractFromSource('test.f90', sample);
+    const add = result.nodes.find((n) => n.name === 'add' && n.kind === 'method');
+    expect(add?.qualifiedName).toBe('math_utils::add');
+  });
+
+  it('should extract use_statement imports', () => {
+    const result = extractFromSource('test.f90', sample);
+    const imports = result.nodes.filter((n) => n.kind === 'import');
+    expect(imports.length).toBeGreaterThan(0);
+    expect(imports.some((i) => i.name === 'math_utils')).toBe(true);
+  });
+
+  it('should extract call expressions within function/program bodies', () => {
+    const result = extractFromSource('test.f90', sample);
+    // Calls are tracked via unresolved references during extraction;
+    // actual 'calls' edges are resolved in the reference-resolution phase.
+    const callRefs = result.unresolvedReferences.filter(
+      (r: { referenceKind: string }) => r.referenceKind === 'calls'
+    );
+    expect(callRefs.length).toBeGreaterThan(0);
+  });
+
+  it('should detect file type as Fortran', () => {
+    expect(detectLanguage('test.f90')).toBe('fortran');
+    expect(detectLanguage('test.F90')).toBe('fortran');
   });
 });

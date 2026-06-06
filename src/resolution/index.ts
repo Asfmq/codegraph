@@ -537,6 +537,12 @@ export class ReferenceResolver {
     // Direct name match
     if (this.knownNames.has(name)) return true;
 
+    // Case-insensitive fallback for languages like Fortran where call sites
+    // may use different casing than declarations (e.g. `call initia` vs
+    // `SUBROUTINE INITIA`).
+    if (this.knownNames.has(name.toLowerCase())) return true;
+    if (this.knownNames.has(name.toUpperCase())) return true;
+
     // For qualified names like "obj.method" or "Class::method", check the parts
     const dotIdx = name.indexOf('.');
     if (dotIdx > 0) {

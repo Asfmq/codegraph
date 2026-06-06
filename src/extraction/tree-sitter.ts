@@ -144,9 +144,11 @@ export class TreeSitterExtractor {
 
   constructor(filePath: string, source: string, language?: Language) {
     this.filePath = filePath;
-    this.source = source;
     this.language = language || detectLanguage(filePath, source);
     this.extractor = EXTRACTORS[this.language] || null;
+    // Allow the language extractor to preprocess source before parsing
+    // (e.g. Fortran converts F77 fixed-form comment markers to F90 `!`).
+    this.source = this.extractor?.preprocessSource?.(source, filePath) ?? source;
   }
 
   /**
@@ -1863,6 +1865,8 @@ export class TreeSitterExtractor {
         referenceKind: 'calls',
         line: node.startPosition.row + 1,
         column: node.startPosition.column,
+        filePath: this.filePath,
+        language: this.language,
       });
     }
   }
@@ -1914,6 +1918,8 @@ export class TreeSitterExtractor {
         referenceKind: 'instantiates',
         line: node.startPosition.row + 1,
         column: node.startPosition.column,
+        filePath: this.filePath,
+        language: this.language,
       });
     }
   }

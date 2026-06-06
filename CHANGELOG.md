@@ -12,6 +12,7 @@ and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### New Features
 
 - `codegraph status --json` now also reports the running CLI `version`, the index directory (`indexPath`), and a `lastIndexed` timestamp (ISO-8601, or null when nothing's indexed yet), so CI and scripts can pin the CLI version and check index freshness from a single command. A matching `CodeGraph.getLastIndexedAt()` library method exposes the same freshness check without shelling out. Thanks @12122J and @eddieran. (#329)
+- CodeGraph now indexes **Fortran** (`.f90`, `.f95`, `.f03`, `.f08`, `.f`, `.for`, `.ftn`) — modules and programs as scope containers, derived types as classes, functions and subroutines as methods with signatures, `use` and `include` imports, and call edges. Free-form Fortran 90+ is fully supported; fixed-form F77 files may have partial extraction on constructs the grammar doesn't handle (comment lines, continuation markers).
 
 ### Fixes
 

@@ -97,7 +97,7 @@ export function hashContent(content: string): string {
  * vendored blobs blow the WASM heap and the worker-recycle budget for no useful
  * symbols. 1 MB covers essentially all hand-written source.
  */
-const MAX_FILE_SIZE = 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
  * Directory names that are dependency, build, cache, or tooling output across the

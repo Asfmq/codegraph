@@ -675,6 +675,27 @@ export function matchFuzzy(
     };
   }
 
+  if (finalCandidates.length > 1) {
+    // Multiple case-insensitive matches — disambiguate by file proximity.
+    // Common for case-insensitive languages (Fortran) where the same function
+    // name appears in multiple files (e.g. INITIA in both tlusty208.f and
+    // synspec54.f). Prefer same-file, then same-directory, then closest path.
+    const bestMatch = findBestMatch(
+      { ...ref, referenceName: lowerName },
+      finalCandidates,
+      context
+    );
+    if (bestMatch) {
+      const proximity = computePathProximity(ref.filePath, bestMatch.filePath);
+      return {
+        original: ref,
+        targetNodeId: bestMatch.id,
+        confidence: proximity >= 30 ? 0.6 : 0.4,
+        resolvedBy: 'fuzzy',
+      };
+    }
+  }
+
   return null;
 }
 

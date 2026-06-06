@@ -224,4 +224,12 @@ export interface LanguageExtractor {
 
   /** Extract the dotted package name from a package declaration node. */
   extractPackage?: (node: SyntaxNode, source: string) => string | null;
+
+  /**
+   * Preprocess source text before tree-sitter parsing.
+   * Called once per file, before any AST traversal. Use for source-level
+   * transformations that make a grammar parseable (e.g. converting F77
+   * fixed-form comment markers to F90 `!` comments for the Fortran grammar).
+   */
+  preprocessSource?: (source: string, filePath: string) => string;
 }
